@@ -16,6 +16,7 @@ interface RenewComplianceItemFormProps {
 
 export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
@@ -31,24 +32,24 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
     if (!file) return
 
     setExtracting(true)
-    const formData = new FormData()
-    formData.append('file', file)
+    const uploadFormData = new FormData()
+    uploadFormData.append('file', file)
 
     try {
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       })
 
       const data = await response.json()
       if (data.success) {
         setExtractedData(data.data)
         // Pre-fill form with extracted data
-        setFormData({
-          ...formData,
-          newExpirationDate: data.data.expirationDate || formData.newExpirationDate,
-          licenseNumber: data.data.licenseNumber || formData.licenseNumber,
-        })
+        setFormData((prev) => ({
+          ...prev,
+          newExpirationDate: data.data.expirationDate || prev.newExpirationDate,
+          licenseNumber: data.data.licenseNumber || prev.licenseNumber,
+        }))
       } else {
         throw new Error(data.error || 'Failed to extract data')
       }

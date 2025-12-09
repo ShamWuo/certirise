@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     // Get business
     const { data: business } = await supabase
       .from('businesses')
-      .select('id, name, email')
+      .select('id, name, email, stripe_customer_id')
       .eq('user_id', user.id)
       .single()
 

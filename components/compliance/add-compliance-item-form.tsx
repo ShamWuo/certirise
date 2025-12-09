@@ -18,6 +18,7 @@ interface AddComplianceItemFormProps {
 
 export function AddComplianceItemForm({ businessId, employees }: AddComplianceItemFormProps) {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
@@ -38,26 +39,26 @@ export function AddComplianceItemForm({ businessId, employees }: AddComplianceIt
     if (!file) return
 
     setExtracting(true)
-    const formData = new FormData()
-    formData.append('file', file)
+    const uploadFormData = new FormData()
+    uploadFormData.append('file', file)
 
     try {
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
-        body: formData,
+        body: uploadFormData,
       })
 
       const data = await response.json()
       if (data.success) {
         setExtractedData(data.data)
         // Pre-fill form with extracted data
-        setFormData({
-          ...formData,
-          name: data.data.licenseType || formData.name,
-          licenseNumber: data.data.licenseNumber || formData.licenseNumber,
-          expirationDate: data.data.expirationDate || formData.expirationDate,
-          issuingAuthority: data.data.issuingAuthority || formData.issuingAuthority,
-        })
+        setFormData((prev) => ({
+          ...prev,
+          name: data.data.licenseType || prev.name,
+          licenseNumber: data.data.licenseNumber || prev.licenseNumber,
+          expirationDate: data.data.expirationDate || prev.expirationDate,
+          issuingAuthority: data.data.issuingAuthority || prev.issuingAuthority,
+        }))
       } else {
         throw new Error(data.error || 'Failed to extract data')
       }

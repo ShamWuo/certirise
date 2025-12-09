@@ -337,7 +337,7 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDelete(employee.id)}
+                      onClick={() => handleDeleteClick(employee.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

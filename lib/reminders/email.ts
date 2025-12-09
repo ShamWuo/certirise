@@ -78,7 +78,7 @@ export async function sendReminderEmail(data: ReminderEmailData) {
       </html>
     `
 
-    const { data, error } = await resend.emails.send({
+    const { data: emailData, error } = await resend.emails.send({
       from: 'Certirise <notifications@certirise.com>',
       to: [to],
       subject,
@@ -90,7 +90,7 @@ export async function sendReminderEmail(data: ReminderEmailData) {
       throw error
     }
 
-    return { success: true, id: data?.id }
+    return { success: true, id: emailData?.id }
   } catch (error) {
     console.error('Failed to send reminder email:', error)
     throw error
