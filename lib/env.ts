@@ -27,6 +27,8 @@ export const env = {
   // Google Cloud Vision (optional)
   GOOGLE_CLOUD_PROJECT_ID: process.env.GOOGLE_CLOUD_PROJECT_ID,
   GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+  GOOGLE_APPLICATION_CREDENTIALS_JSON:
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON,
 
   // Email (Resend)
   RESEND_API_KEY: process.env.RESEND_API_KEY, // Optional but recommended

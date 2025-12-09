@@ -20,6 +20,7 @@ export default function SignupPage() {
     setError(null)
 
     const formData = new FormData(e.currentTarget)
+    const name = formData.get('name') as string
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
@@ -27,7 +28,7 @@ export default function SignupPage() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       })
 
       const data = await response.json()
