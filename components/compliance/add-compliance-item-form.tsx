@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card'
 import { Upload, Loader2 } from 'lucide-react'
 import { Employee } from '@/lib/types/database'
-import { useToast } from '@/lib/hooks/use-toast'
 
 interface AddComplianceItemFormProps {
   businessId: string
@@ -18,7 +17,6 @@ interface AddComplianceItemFormProps {
 
 export function AddComplianceItemForm({ businessId, employees }: AddComplianceItemFormProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
@@ -39,26 +37,26 @@ export function AddComplianceItemForm({ businessId, employees }: AddComplianceIt
     if (!file) return
 
     setExtracting(true)
-    const uploadFormData = new FormData()
-    uploadFormData.append('file', file)
+    const formData = new FormData()
+    formData.append('file', file)
 
     try {
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
-        body: uploadFormData,
+        body: formData,
       })
 
       const data = await response.json()
       if (data.success) {
         setExtractedData(data.data)
         // Pre-fill form with extracted data
-        setFormData((prev) => ({
-          ...prev,
-          name: data.data.licenseType || prev.name,
-          licenseNumber: data.data.licenseNumber || prev.licenseNumber,
-          expirationDate: data.data.expirationDate || prev.expirationDate,
-          issuingAuthority: data.data.issuingAuthority || prev.issuingAuthority,
-        }))
+        setFormData({
+          ...formData,
+          name: data.data.licenseType || formData.name,
+          licenseNumber: data.data.licenseNumber || formData.licenseNumber,
+          expirationDate: data.data.expirationDate || formData.expirationDate,
+          issuingAuthority: data.data.issuingAuthority || formData.issuingAuthority,
+        })
       } else {
         throw new Error(data.error || 'Failed to extract data')
       }
@@ -90,19 +88,10 @@ export function AddComplianceItemForm({ businessId, employees }: AddComplianceIt
         throw new Error('Failed to create compliance item')
       }
 
-      toast({
-        title: 'Success',
-        description: 'Compliance item created successfully',
-        variant: 'success',
-      })
       router.push('/dashboard')
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to create compliance item. Please try again.',
-        variant: 'destructive',
-      })
+      alert('Failed to create compliance item. Please try again.')
     } finally {
       setLoading(false)
     }

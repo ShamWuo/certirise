@@ -1,26 +1,12 @@
 import Stripe from 'stripe'
 
-function getStripe(): Stripe {
-  const secretKey = process.env.STRIPE_SECRET_KEY
-  if (!secretKey) {
-    throw new Error('STRIPE_SECRET_KEY is not set')
-  }
-  return new Stripe(secretKey, {
-    apiVersion: '2023-10-16',
-    typescript: true,
-  })
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('STRIPE_SECRET_KEY is not set')
 }
 
-// Lazy initialization - only create when accessed
-export const stripe = new Proxy({} as Stripe, {
-  get(_target, prop) {
-    const stripeInstance = getStripe()
-    const value = (stripeInstance as any)[prop]
-    if (typeof value === 'function') {
-      return value.bind(stripeInstance)
-    }
-    return value
-  },
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-06-20',
+  typescript: true,
 })
 
 export const PRICE_IDS = {

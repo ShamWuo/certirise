@@ -6,20 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Employee } from '@/lib/types/database'
-import { Plus, Users, Edit, Trash2, Loader2, Key, Copy, Check } from 'lucide-react'
+import { Plus, Users, Edit, Trash2, Loader2, Key } from 'lucide-react'
 import Link from 'next/link'
-import { useToast } from '@/lib/hooks/use-toast'
 
 interface EmployeesManagerProps {
   businessId: string
@@ -31,11 +20,6 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
   const [loading, setLoading] = useState(false)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [employeeToDelete, setEmployeeToDelete] = useState<string | null>(null)
-  const [portalToken, setPortalToken] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const { toast } = useToast()
 
   const [formData, setFormData] = useState({
     name: '',
@@ -82,18 +66,9 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
         phone: '',
         portal_enabled: false,
       })
-      toast({
-        title: 'Success',
-        description: editingEmployee ? 'Employee updated successfully' : 'Employee added successfully',
-        variant: 'success',
-      })
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to save employee. Please try again.',
-        variant: 'destructive',
-      })
+      alert('Failed to save employee. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -111,17 +86,12 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
     setIsDialogOpen(true)
   }
 
-  const handleDeleteClick = (id: string) => {
-    setEmployeeToDelete(id)
-    setDeleteConfirmOpen(true)
-  }
-
-  const handleDelete = async () => {
-    if (!employeeToDelete) return
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this employee?')) return
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/employees/${employeeToDelete}`, {
+      const response = await fetch(`/api/employees/${id}`, {
         method: 'DELETE',
       })
 
@@ -129,21 +99,10 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
         throw new Error('Failed to delete employee')
       }
 
-      setEmployees(employees.filter(e => e.id !== employeeToDelete))
-      setDeleteConfirmOpen(false)
-      setEmployeeToDelete(null)
-      toast({
-        title: 'Success',
-        description: 'Employee deleted successfully',
-        variant: 'success',
-      })
+      setEmployees(employees.filter(e => e.id !== id))
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to delete employee. Please try again.',
-        variant: 'destructive',
-      })
+      alert('Failed to delete employee. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -160,38 +119,15 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
       }
 
       const { token } = await response.json()
-      setPortalToken(token)
+      alert(`Portal access token: ${token}\n\nShare this with the employee for portal access.`)
       
       // Refresh employees list
       const refreshResponse = await fetch('/api/employees')
       const { employees: updatedEmployees } = await refreshResponse.json()
       setEmployees(updatedEmployees)
-      
-      toast({
-        title: 'Portal token generated',
-        description: 'Token copied to clipboard. Share it with the employee.',
-        variant: 'success',
-      })
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to generate portal token. Please try again.',
-        variant: 'destructive',
-      })
-    }
-  }
-
-  const copyToken = async () => {
-    if (portalToken) {
-      await navigator.clipboard.writeText(portalToken)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-      toast({
-        title: 'Copied!',
-        description: 'Portal token copied to clipboard',
-        variant: 'success',
-      })
+      alert('Failed to generate portal token. Please try again.')
     }
   }
 
@@ -337,7 +273,7 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteClick(employee.id)}
+                      onClick={() => handleDelete(employee.id)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -364,55 +300,6 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
             </Card>
           ))}
         </div>
-      )}
-
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete this employee and all associated compliance items.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={loading}>
-              {loading ? 'Deleting...' : 'Delete'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {portalToken && (
-        <Dialog open={!!portalToken} onOpenChange={() => setPortalToken(null)}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Portal Access Token</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Share this token with the employee for portal access. Keep it secure.
-              </p>
-              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                <code className="flex-1 text-sm font-mono break-all">
-                  {portalToken}
-                </code>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={copyToken}
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   )

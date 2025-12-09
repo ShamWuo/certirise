@@ -61,21 +61,6 @@ export interface Reminder {
   created_at: string
 }
 
-export interface Location {
-  id: string
-  business_id: string
-  name: string
-  address: string | null
-  city: string | null
-  state: string | null
-  zip_code: string | null
-  phone: string | null
-  email: string | null
-  is_active: boolean
-  created_at: string
-  updated_at: string
-}
-
 export interface Regulation {
   id: string
   state: string

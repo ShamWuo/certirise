@@ -1,22 +1,10 @@
 import twilio from 'twilio'
 
-function getTwilioClient() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const authToken = process.env.TWILIO_AUTH_TOKEN
-  
-  if (!accountSid || !authToken) {
-    return null
-  }
-  
-  // Validate accountSid format before creating client
-  if (!accountSid.startsWith('AC')) {
-    return null
-  }
-  
-  return twilio(accountSid, authToken)
-}
-
+const accountSid = process.env.TWILIO_ACCOUNT_SID
+const authToken = process.env.TWILIO_AUTH_TOKEN
 const phoneNumber = process.env.TWILIO_PHONE_NUMBER
+
+const client = accountSid && authToken ? twilio(accountSid, authToken) : null
 
 interface ReminderSMSData {
   to: string
@@ -27,8 +15,6 @@ interface ReminderSMSData {
 }
 
 export async function sendReminderSMS(data: ReminderSMSData) {
-  const client = getTwilioClient()
-  
   if (!client) {
     console.warn('Twilio not configured. SMS not sent.')
     return { success: false, error: 'SMS not configured' }
@@ -56,7 +42,7 @@ export async function sendReminderSMS(data: ReminderSMSData) {
 
     const result = await client.messages.create({
       body: message,
-      from: phoneNumber || '',
+      from: phoneNumber,
       to: to,
     })
 

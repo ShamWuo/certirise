@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Upload } from 'lucide-react'
 import { ComplianceItem } from '@/lib/types/database'
-import { useToast } from '@/lib/hooks/use-toast'
 
 interface RenewComplianceItemFormProps {
   item: ComplianceItem & { employees?: { name: string } | null }
@@ -16,7 +15,6 @@ interface RenewComplianceItemFormProps {
 
 export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) {
   const router = useRouter()
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
@@ -32,34 +30,30 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
     if (!file) return
 
     setExtracting(true)
-    const uploadFormData = new FormData()
-    uploadFormData.append('file', file)
+    const formData = new FormData()
+    formData.append('file', file)
 
     try {
       const response = await fetch('/api/ai/extract', {
         method: 'POST',
-        body: uploadFormData,
+        body: formData,
       })
 
       const data = await response.json()
       if (data.success) {
         setExtractedData(data.data)
         // Pre-fill form with extracted data
-        setFormData((prev) => ({
-          ...prev,
-          newExpirationDate: data.data.expirationDate || prev.newExpirationDate,
-          licenseNumber: data.data.licenseNumber || prev.licenseNumber,
-        }))
+        setFormData({
+          ...formData,
+          newExpirationDate: data.data.expirationDate || formData.newExpirationDate,
+          licenseNumber: data.data.licenseNumber || formData.licenseNumber,
+        })
       } else {
         throw new Error(data.error || 'Failed to extract data')
       }
     } catch (error: any) {
       console.error(error)
-      toast({
-        title: 'Extraction Failed',
-        description: 'Failed to extract data from image. Please try again or enter manually.',
-        variant: 'destructive',
-      })
+      alert('Failed to extract data from image. Please try again or enter manually.')
     } finally {
       setExtracting(false)
     }
@@ -85,19 +79,10 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
         throw new Error('Failed to update compliance item')
       }
 
-      toast({
-        title: 'Success',
-        description: 'Compliance item marked as renewed',
-        variant: 'success',
-      })
       router.push('/dashboard')
     } catch (error) {
       console.error(error)
-      toast({
-        title: 'Error',
-        description: 'Failed to renew compliance item. Please try again.',
-        variant: 'destructive',
-      })
+      alert('Failed to renew compliance item. Please try again.')
     } finally {
       setLoading(false)
     }
