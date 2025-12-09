@@ -67,3 +67,4 @@ export const stripeCheckoutSchema = z.object({
   planType: z.enum(['starter', 'pro']).optional(),
 })
 
+
