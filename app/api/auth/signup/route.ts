@@ -3,9 +3,16 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const body = await request.json()
+    const email = body.email as string
+    const password = body.password as string
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email and password are required' },
+        { status: 400 }
+      )
+    }
 
     const supabase = createClient()
 
@@ -21,11 +28,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Redirect to onboarding after signup
-    return NextResponse.redirect(new URL('/onboarding', request.url))
-  } catch (error: any) {
+    // Return success with redirect URL
     return NextResponse.json(
-      { error: error.message },
+      { success: true, redirect: '/onboarding' },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error('Signup error:', error)
+    return NextResponse.json(
+      { error: error.message || 'An error occurred during signup' },
       { status: 500 }
     )
   }

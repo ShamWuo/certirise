@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const body = await request.json()
+    const email = body.email as string
+    const password = body.password as string
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: 'Email and password are required' },
+        { status: 400 }
+      )
+    }
 
     const supabase = createClient()
 
@@ -22,10 +28,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  } catch (error: any) {
+    // Return success with redirect URL
     return NextResponse.json(
-      { error: error.message },
+      { success: true, redirect: '/dashboard' },
+      { status: 200 }
+    )
+  } catch (error: any) {
+    console.error('Login error:', error)
+    return NextResponse.json(
+      { error: error.message || 'An error occurred during login' },
       { status: 500 }
     )
   }
