@@ -1,6 +1,6 @@
 # Production Readiness Checklist
 
-## ⚠️ Current Status: **NOT PRODUCTION READY**
+## ⚠️ Current Status: **IN PROGRESS**
 
 This document outlines what needs to be addressed before deploying to production.
 
@@ -30,12 +30,9 @@ This document outlines what needs to be addressed before deploying to production
   - Sanitize all user inputs
 
 ### 3. **Environment Variable Validation**
-**Status:** ❌ Missing  
-**Risk:** MEDIUM  
-**Issue:** App crashes at runtime if env vars missing  
-**Action Required:**
-  - Create `lib/env.ts` to validate all env vars at startup
-  - Fail fast if required vars are missing
+**Status:** ✅ Added (lib/env.ts)  
+**Risk:** LOW  
+**Action:** Keep `.env` in sync for prod/staging
 
 ### 4. **Error Handling & Logging**
 **Status:** ⚠️ Basic  
@@ -50,13 +47,12 @@ This document outlines what needs to be addressed before deploying to production
   - Add error tracking service
 
 ### 5. **Rate Limiting**
-**Status:** ❌ Missing  
-**Risk:** HIGH  
-**Issue:** No protection against abuse/DDoS  
+**Status:** ⚠️ Basic  
+**Risk:** MEDIUM  
+**Notes:** In-memory limits added on auth + extract; swap to Redis/Edge for prod and extend to all APIs  
 **Action Required:**
-  - Add rate limiting to all API routes
-  - Use Upstash Redis or Vercel Edge Config
-  - Different limits for different endpoints
+  - Use Upstash Redis/Edge for distributed rate limits
+  - Apply per-endpoint policies
 
 ### 6. **File Upload Security**
 **Status:** ⚠️ Incomplete  
@@ -75,10 +71,8 @@ This document outlines what needs to be addressed before deploying to production
 ## 🟡 High Priority (Fix Soon)
 
 ### 7. **Security Headers**
-**Status:** ❌ Missing  
-**Action Required:**
-- Add security headers (CSP, HSTS, X-Frame-Options, etc.)
-- Configure in `next.config.mjs` or middleware
+**Status:** ✅ Added baseline via middleware  
+**Action:** Tighten CSP directives per deployed domains/assets
 
 ### 8. **CORS Configuration**
 **Status:** ❌ Not Explicitly Configured  
@@ -95,9 +89,7 @@ This document outlines what needs to be addressed before deploying to production
 ### 10. **Database Migrations**
 **Status:** ⚠️ Manual  
 **Action Required:**
-- Set up proper migration system
-- Version control migrations
-- Rollback procedures
+- Ensure `schema.sql` and `add-locations.sql` are applied; add RLS migration; document rollback
 
 ### 11. **Monitoring & Alerting**
 **Status:** ❌ Missing  
@@ -177,7 +169,7 @@ Before deploying, ensure:
 
 - [ ] All critical issues above are resolved
 - [ ] Environment variables configured in production
-- [ ] Database migrations run
+- [ ] Database migrations (schema + locations + RLS) run
 - [ ] RLS policies enabled and tested
 - [ ] Error tracking configured
 - [ ] Monitoring set up

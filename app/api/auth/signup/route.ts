@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/route'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { env } from '@/lib/env'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,43 +19,55 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createRouteClient()
+
+    // Basic in-memory rate limit; swap to Redis/Edge for production
+    const identifier = request.ip || email
+    const limit = await rateLimit(identifier, {
+      windowMs: 60 * 1000,
+      maxRequests: 10,
+    })
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many signup attempts. Please wait and try again.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': limit.remaining.toString(),
+            'X-RateLimit-Reset': limit.resetTime.toString(),
+          },
+        }
+      )
+    }
     const supabaseAdmin = createSupabaseAdmin(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY
     )
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: adminError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
+      email_confirm: true,
+      user_metadata: { name },
     })
 
-    if (error) {
+    if (adminError) {
+      const isDuplicate =
+        adminError.status === 422 ||
+        (typeof adminError.code === 'string' && adminError.code.includes('already'))
+
       return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      )
-    }
-
-    // Immediately confirm and store metadata so users can log in right away
-    if (data.user) {
-      const { error: adminError } = await supabaseAdmin.auth.admin.updateUserById(
-        data.user.id,
         {
-          email_confirm: true,
-          user_metadata: { name },
-        }
+          error: isDuplicate ? 'An account with this email already exists' : adminError.message,
+        },
+        { status: isDuplicate ? 409 : adminError.status || 400 }
       )
-
-      if (adminError) {
-        console.error('Signup admin update error:', adminError)
-        return NextResponse.json(
-          { error: 'Account created but confirmation failed. Please try signing in.' },
-          { status: 500 }
-        )
-      }
     }
 
-    // Sign the user in to establish session cookies
+    if (!data.user) {
+      throw new Error('Failed to create user')
+    }
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -63,7 +76,7 @@ export async function POST(request: NextRequest) {
     if (signInError) {
       console.error('Signup auto-login error:', signInError)
       return NextResponse.json(
-        { error: signInError.message },
+        { error: 'Account created, but automatic login failed. Please sign in manually.' },
         { status: 500 }
       )
     }

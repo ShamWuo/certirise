@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createRouteClient } from '@/lib/supabase/route'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,26 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createRouteClient()
+
+    // Basic in-memory rate limit; swap to Redis/Edge for production
+    const identifier = request.ip || email
+    const limit = await rateLimit(identifier, {
+      windowMs: 60 * 1000,
+      maxRequests: 20,
+    })
+
+    if (!limit.allowed) {
+      return NextResponse.json(
+        { error: 'Too many login attempts. Please wait and try again.' },
+        {
+          status: 429,
+          headers: {
+            'X-RateLimit-Remaining': limit.remaining.toString(),
+            'X-RateLimit-Reset': limit.resetTime.toString(),
+          },
+        }
+      )
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
