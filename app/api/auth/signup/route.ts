@@ -4,6 +4,34 @@ import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { env } from '@/lib/env'
 import { rateLimit } from '@/lib/rate-limit'
 
+async function findUserIdByEmail(adminClient: any, email: string) {
+  const normalized = email.toLowerCase()
+  const perPage = 200
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await adminClient.auth.admin.listUsers({
+      page,
+      perPage,
+    })
+
+    if (error) {
+      throw error
+    }
+
+    const match = data.users?.find(
+      (user: { id: string; email?: string | null }) => user.email?.toLowerCase() === normalized
+    )
+    if (match) {
+      return match.id
+    }
+
+    if (!data.users || data.users.length < perPage) {
+      break
+    }
+  }
+
+  return null
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -44,27 +72,50 @@ export async function POST(request: NextRequest) {
       env.SUPABASE_SERVICE_ROLE_KEY
     )
 
-    const { data, error: adminError } = await supabaseAdmin.auth.admin.createUser({
+    const {
+      data,
+      error: adminError,
+    } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { name },
     })
 
+    let userId = data.user?.id ?? null
     if (adminError) {
-      const isDuplicate =
-        adminError.status === 422 ||
-        (typeof adminError.code === 'string' && adminError.code.includes('already'))
+      const isDuplicate = adminError.status === 422
+      if (!isDuplicate) {
+        return NextResponse.json(
+          { error: adminError.message },
+          { status: adminError.status || 400 }
+        )
+      }
 
-      return NextResponse.json(
-        {
-          error: isDuplicate ? 'An account with this email already exists' : adminError.message,
-        },
-        { status: isDuplicate ? 409 : adminError.status || 400 }
-      )
+      userId = await findUserIdByEmail(supabaseAdmin, email)
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'Account exists but could not be accessed. Please contact support.' },
+          { status: 500 }
+        )
+      }
+
+      const { error: recoveryError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        password,
+        email_confirm: true,
+        user_metadata: { name },
+      })
+
+      if (recoveryError) {
+        console.error('Signup duplicate recovery error:', recoveryError)
+        return NextResponse.json(
+          { error: 'Account already exists. Please try signing in instead.' },
+          { status: 409 }
+        )
+      }
     }
 
-    if (!data.user) {
+    if (!userId) {
       throw new Error('Failed to create user')
     }
 
@@ -90,5 +141,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
-
