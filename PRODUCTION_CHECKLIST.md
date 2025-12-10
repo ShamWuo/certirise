@@ -170,7 +170,7 @@ Before deploying, ensure:
 - [ ] All critical issues above are resolved
 - [ ] Environment variables configured in production
 - [ ] Database migrations (schema + locations + RLS) run
-- [ ] RLS policies enabled and tested
+- [ ] RLS policies enabled and tested (`lib/supabase/migrations/rls.sql`)
 - [ ] Error tracking configured
 - [ ] Monitoring set up
 - [ ] Cron job configured for reminders
