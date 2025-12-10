@@ -18,6 +18,9 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
   const [loading, setLoading] = useState(false)
   const [extracting, setExtracting] = useState(false)
   const [extractedData, setExtractedData] = useState<any>(null)
+  const [prefillLoading, setPrefillLoading] = useState(false)
+  const [prefillData, setPrefillData] = useState<any>(null)
+  const [prefillError, setPrefillError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     newExpirationDate: '',
@@ -72,6 +75,7 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
           license_number: formData.licenseNumber,
           status: 'active',
           notes: formData.notes,
+          last_renewal_date: new Date().toISOString().split('T')[0],
         }),
       })
 
@@ -88,6 +92,65 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
     }
   }
 
+  const handlePrefill = async () => {
+    setPrefillLoading(true)
+    setPrefillError(null)
+    try {
+      const res = await fetch(`/api/compliance-items/${item.id}/prefill`)
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'Unable to generate autofill data')
+      }
+      setPrefillData(data)
+    } catch (error: any) {
+      console.error(error)
+      setPrefillError(error.message || 'Unable to generate autofill data')
+    } finally {
+      setPrefillLoading(false)
+    }
+  }
+
+  const copyPrefill = () => {
+    if (!prefillData) return
+    const lines: string[] = []
+    lines.push(`Business: ${prefillData.business?.name || 'n/a'}`)
+    if (prefillData.business?.city || prefillData.business?.state) {
+      lines.push(`Location: ${prefillData.business?.city || ''} ${prefillData.business?.state || ''}`.trim())
+    }
+    if (prefillData.location?.name) {
+      lines.push(`Site: ${prefillData.location.name}`)
+    }
+    lines.push(`Contact: ${prefillData.business?.email || 'n/a'} | ${prefillData.business?.phone || 'n/a'}`)
+    lines.push(`Employee: ${prefillData.employee?.name || 'n/a'}${prefillData.employee?.email ? ` (${prefillData.employee.email})` : ''}`)
+    lines.push(`License/Item: ${prefillData.item?.name || 'n/a'}`)
+    if (prefillData.item?.license_number) {
+      lines.push(`License #: ${prefillData.item.license_number}`)
+    }
+    if (prefillData.item?.issuing_authority) {
+      lines.push(`Authority: ${prefillData.item.issuing_authority}`)
+    }
+    if (prefillData.item?.renewal_frequency) {
+      lines.push(`Renewal Frequency: ${prefillData.item.renewal_frequency}`)
+    }
+    if (prefillData.regulation?.renewal_process_url) {
+      lines.push(`Renewal URL: ${prefillData.regulation.renewal_process_url}`)
+    }
+    if (prefillData.regulation?.renewal_window) {
+      lines.push(`Renewal Window: ${prefillData.regulation.renewal_window}`)
+    }
+    if (prefillData.regulation?.fees) {
+      lines.push(`Fees: ${prefillData.regulation.fees}`)
+    }
+    if (prefillData.regulation?.notes) {
+      lines.push(`Notes: ${prefillData.regulation.notes}`)
+    }
+
+    const text = lines.join('\n')
+    navigator.clipboard?.writeText(text).catch(() => {
+      console.warn('Clipboard write failed')
+    })
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -99,6 +162,63 @@ export function RenewComplianceItemForm({ item }: RenewComplianceItemFormProps) 
           <p><strong>Expiration Date:</strong> {new Date(item.expiration_date).toLocaleDateString()}</p>
           {item.license_number && (
             <p><strong>License Number:</strong> {item.license_number}</p>
+          )}
+        </div>
+
+        <div className="border rounded-lg p-4 bg-muted/50 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="font-semibold">Auto-fill renewal form</p>
+              <p className="text-sm text-muted-foreground">Pull business + regulation details to paste into renewal forms.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={handlePrefill} disabled={prefillLoading}>
+              {prefillLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading
+                </>
+              ) : (
+                'Generate'
+              )}
+            </Button>
+          </div>
+          {prefillError && (
+            <p className="text-sm text-red-600">{prefillError}</p>
+          )}
+          {prefillData && (
+            <div className="space-y-2 text-sm">
+              <div>
+                <strong>Business:</strong> {prefillData.business?.name}
+              </div>
+              {prefillData.location && (
+                <div>
+                  <strong>Location:</strong> {prefillData.location?.name} {prefillData.location?.city && `• ${prefillData.location.city}`} {prefillData.location?.state && `${prefillData.location.state}`}
+                </div>
+              )}
+              <div>
+                <strong>Contact:</strong> {prefillData.business?.email || 'n/a'} {prefillData.business?.phone ? `• ${prefillData.business.phone}` : ''}
+              </div>
+              <div>
+                <strong>Employee:</strong> {prefillData.employee?.name || 'n/a'}
+              </div>
+              <div>
+                <strong>Item:</strong> {prefillData.item?.name} {prefillData.item?.license_number ? `• ${prefillData.item.license_number}` : ''}
+              </div>
+              {prefillData.regulation && (
+                <div className="space-y-1">
+                  <div className="font-semibold">Regulation hints ({prefillData.regulation.state}):</div>
+                  {prefillData.regulation.renewal_process_url && (
+                    <div>Renewal URL: <a className="text-primary" href={prefillData.regulation.renewal_process_url} target="_blank" rel="noreferrer">{prefillData.regulation.renewal_process_url}</a></div>
+                  )}
+                  {prefillData.regulation.renewal_window && <div>Window: {prefillData.regulation.renewal_window}</div>}
+                  {prefillData.regulation.fees && <div>Fees: {prefillData.regulation.fees}</div>}
+                  {prefillData.regulation.notes && <div>Notes: {prefillData.regulation.notes}</div>}
+                </div>
+              )}
+              <Button type="button" size="sm" variant="secondary" onClick={copyPrefill}>
+                Copy to clipboard
+              </Button>
+            </div>
           )}
         </div>
 

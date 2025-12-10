@@ -11,12 +11,40 @@ interface ReminderSchedule {
   daysBefore: number[]
   emailDays: number[]
   smsDays: number[]
+  overdueDays: number[]
 }
 
 const REMINDER_SCHEDULE: ReminderSchedule = {
   daysBefore: [90, 60, 30, 14, 7, 0],
   emailDays: [90, 60, 30, 14, 7, 0],
   smsDays: [60, 30, 14, 7, 0], // SMS only for closer deadlines
+  overdueDays: [-1, -7],
+}
+
+function buildAdaptiveSchedule(item: any) {
+  const schedule = new Set<number>([
+    ...REMINDER_SCHEDULE.daysBefore,
+    ...REMINDER_SCHEDULE.overdueDays,
+  ])
+
+  if (item.last_renewal_date) {
+    const exp = new Date(item.expiration_date)
+    const last = new Date(item.last_renewal_date)
+    exp.setHours(0, 0, 0, 0)
+    last.setHours(0, 0, 0, 0)
+    const msPerDay = 1000 * 60 * 60 * 24
+    const lead = Math.ceil((exp.getTime() - last.getTime()) / msPerDay)
+
+    // If user historically renews X days before, emphasize that window
+    if (lead > 0 && lead < 180) {
+      schedule.add(lead)
+      schedule.add(Math.max(0, lead - 7))
+      schedule.add(Math.max(0, lead - 1))
+    }
+  }
+
+  // Return sorted descending so overdue (negative) handled, but membership used only for includes check
+  return Array.from(schedule).sort((a, b) => b - a)
 }
 
 export async function checkAndSendReminders() {
@@ -53,8 +81,10 @@ export async function checkAndSendReminders() {
         (expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
       )
 
+      const scheduleDays = buildAdaptiveSchedule(item)
+
       // Check if we should send a reminder for this day
-      if (!REMINDER_SCHEDULE.daysBefore.includes(daysUntilExpiration)) {
+      if (!scheduleDays.includes(daysUntilExpiration)) {
         continue
       }
 
@@ -74,7 +104,8 @@ export async function checkAndSendReminders() {
       const business = (item as any).businesses
 
       // Send email reminder
-      if (REMINDER_SCHEDULE.emailDays.includes(daysUntilExpiration) && business.email) {
+      if (REMINDER_SCHEDULE.emailDays.includes(daysUntilExpiration) || REMINDER_SCHEDULE.overdueDays.includes(daysUntilExpiration)) {
+        if (business.email) {
         try {
           await sendReminderEmail({
             to: business.email,
@@ -94,6 +125,7 @@ export async function checkAndSendReminders() {
           })
         } catch (error) {
           console.error(`Failed to send email for item ${item.id}:`, error)
+        }
         }
       }
 

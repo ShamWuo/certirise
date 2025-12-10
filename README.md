@@ -20,7 +20,7 @@ Never miss a license renewal. Automated reminders for beauty & personal care bus
 - **AI**: OpenAI GPT-4o-mini, Google Cloud Vision
 - **Email**: Resend
 - **SMS**: Twilio
-- **Payments**: Stripe (coming soon)
+- **Payments**: Stripe subscriptions and billing
 
 ## Getting Started
 
@@ -129,12 +129,12 @@ Recommended schedule: Run every day at 9 AM UTC.
 
 ## Roadmap
 
-- [ ] Stripe payment integration
-- [ ] Document upload to Supabase Storage
-- [ ] Multi-location support
-- [ ] Employee portal
+- [x] Stripe payment integration
+- [x] Document upload to Supabase Storage
+- [x] Multi-location support
+- [x] Employee portal
 - [ ] Regulation change monitoring
-- [ ] Auto-fill renewal forms
+- [x] Auto-fill renewal forms
 
 ## License
 

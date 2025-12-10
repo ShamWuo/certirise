@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createRouteClient } from '@/lib/supabase/route'
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
 import { env } from '@/lib/env'
 
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createClient()
+    const supabase = createRouteClient()
     const supabaseAdmin = createSupabaseAdmin(
       env.NEXT_PUBLIC_SUPABASE_URL,
       env.SUPABASE_SERVICE_ROLE_KEY

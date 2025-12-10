@@ -119,7 +119,12 @@ export function EmployeesManager({ businessId, initialEmployees }: EmployeesMana
       }
 
       const { token } = await response.json()
-      alert(`Portal access token: ${token}\n\nShare this with the employee for portal access.`)
+      const origin = typeof window !== 'undefined' ? window.location.origin : ''
+      const portalLink = origin
+        ? `${origin}/employee/${employeeId}?token=${token}`
+        : `Portal link: /employee/${employeeId}?token=${token}`
+
+      alert(`Portal access token: ${token}\n\nShareable link:\n${portalLink}`)
       
       // Refresh employees list
       const refreshResponse = await fetch('/api/employees')
