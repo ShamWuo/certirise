@@ -11,17 +11,34 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
+    const {
+      businessName,
+      businessType,
+      state,
+      city,
+      phone,
+      email,
+      settings,
+    } = body
+
+    if (!businessName || !businessType || !state || !city || !email) {
+      return NextResponse.json(
+        { error: 'Please complete all required business details.' },
+        { status: 400 }
+      )
+    }
 
     const { data: business, error } = await supabase
       .from('businesses')
       .insert({
         user_id: user.id,
-        name: body.businessName,
-        type: body.businessType,
-        state: body.state,
-        city: body.city,
-        phone: body.phone,
-        email: body.email,
+        name: businessName,
+        type: businessType,
+        state,
+        city,
+        phone,
+        email,
+        settings: settings || {},
       })
       .select()
       .single()

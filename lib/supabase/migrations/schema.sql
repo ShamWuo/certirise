@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS businesses (
   email TEXT,
   stripe_customer_id TEXT,
   subscription_status TEXT DEFAULT 'inactive',
+  settings JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
